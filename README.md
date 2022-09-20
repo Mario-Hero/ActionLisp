@@ -105,7 +105,7 @@ C++ 14标准
 | (while SYMBOL/VALUE (FUNCTION))                           | T                | while循环                                                    |                                                              |
 | (if (SYMBOL/VALUE) (FUNCTION) (FUNCTION))                 | T                | if函数                                                       |                                                              |
 | (map x (FUNCTION x) LIST)                                 |                  | 把函数应用到列表每个元素，且返回列表                         |                                                              |
-| (system VALUE:string)                                     | T                | 相当于c语言system                                            |                                                              |
+| (system string)                                     | T                | 相当于c语言system                                            |                                                              |
 | (def SYMBOL {SYMBOL...} FUNCTION)                         | T                | 声明函数                                                     | (def fibo {n}<br/>    (return (if (> n 2) <br/>            (+ (fibo (- n 1)) (fibo (- n 2))) <br/>            1))) |
 | (return VALUE)                                            | T                | 函数返回                                                     |                                                              |
 | (randInt VALUEA VALUEB)                                   | T                | 返回随机整数。能取到VALUEA和VALUEB                           |                                                              |
