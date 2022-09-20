@@ -41,7 +41,7 @@
 
 ## 仓库内容
 
-examples文件夹：放置了代码例子，在Windows系统中可以把\*.lisp文件拖入到ActionLisp.exe上执行。也可以直接执行ActionLisp.exe，属于一行执行一行。
+examples文件夹：放置了代码例子，在Windows系统中可以把\*.lisp文件拖入到ActionLisp.exe上执行。也可以直接执行ActionLisp.exe，输入一行执行一行。
 
 ActionLisp.cpp：主程序C++源码。
 
