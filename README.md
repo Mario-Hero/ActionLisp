@@ -2,11 +2,21 @@
 
 设计了一个玩具语言ActionLisp，以及它的基于C++的解释器。语法为LISP类型。
 
+I designed a toy program language: ActionLisp. And I also make an interpreter for it based on C++.
+
 为什么取名叫ActionLisp，是因为我入门编程的第一门语言是Flash的ActionScript 2.0，ActionScript 2.0很简单、使用起来很愉快，代码可以写在帧或任何对象上，可以没有类，还可以任意地加子对象。所以ActionLisp也是可以任意地加子对象的，还抛弃了Common Lisp的一些麻烦的语法。
+
+Why I call it ActionLisp? Because the first program language I learn is ActionScript 2.0 on Flash. ActionScript 2.0 is a simple and interesting language. You can put your codes on any frame or objects. Any objects can have child objects. So my language ActionLisp is the same. You can put any object under others. ActionLisp is also simple and easy to use.
 
 支持解释整个文件，也支持输入一行执行一行。
 
+It supports read a whole file or REPL mode.
+
 但是这个语言终归只是一个玩具，功能少、效率低。之所以用类Lisp的语法也是因为这种语法的解释器或编译器制作比较方便，适合拿来练练手。
+
+However, this language is a toy. It's lack of functions, and it runs slow. But an interpreter for Lisp-like language is a good point to start for me.
+
+[README English Version](https://github.com/Mario-Hero/ActionLisp/blob/main/README_EN.md)
 
 ## 程序例子
 
@@ -105,7 +115,7 @@ C++ 14标准
 | (while SYMBOL/VALUE (FUNCTION))                           | T                | while循环                                                    |                                                              |
 | (if (SYMBOL/VALUE) (FUNCTION) (FUNCTION))                 | T                | if函数                                                       |                                                              |
 | (map x (FUNCTION x) LIST)                                 |                  | 把函数应用到列表每个元素，且返回列表                         |                                                              |
-| (system string)                                     | T                | 相当于c语言system                                            |                                                              |
+| (system string)                                           | T                | 相当于c语言system                                            |                                                              |
 | (def SYMBOL {SYMBOL...} FUNCTION)                         | T                | 声明函数                                                     | (def fibo {n}<br/>    (return (if (> n 2) <br/>            (+ (fibo (- n 1)) (fibo (- n 2))) <br/>            1))) |
 | (return VALUE)                                            | T                | 函数返回                                                     |                                                              |
 | (randInt VALUEA VALUEB)                                   | T                | 返回随机整数。能取到VALUEA和VALUEB                           |                                                              |
