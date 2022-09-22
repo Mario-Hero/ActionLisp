@@ -39,6 +39,18 @@ However, this language is a toy. It's lack of functions, and it runs slow. But a
 ((@ pp printp)) ;print 3.14000
 ```
 
+### Array
+
+```lisp
+(let a {1 2 3 4 5 6 7 8 9 10})
+(print a) ; print { 1 2 3 4 5 6 7 8 9 10 }
+
+(for x (range 0 (length a))
+    (++ (ref a x)))
+
+(print a) ; print { 2 3 4 5 6 7 8 9 10 11 }
+```
+
 the other demos are in folder "examples". You can drag the \*.lisp files to ActionLisp.exe on Windows to run them. You can also run ActionLisp.exe independently.
 
 ## C++ standard
@@ -112,6 +124,7 @@ Use @ to access child variables and functions. For example, (@ a b) is a.b or a.
 | (mod VALUE VALUE)                                         | T      | mod. support double.                           |                               |
 | (switch a (case {b,d,e} EXPRESSION) (case c EXPRESSION))  | T      | switch. Don't need break.                         |                               |
 | (ref vector n)                                            | T      | =vector[n]. If n < 0, find it from the end. | (ref {1 3 5} 1) |
+| (length vector) | T | get length of vector. |  |
 | (sub list p1 p2)                                          | T      | return sublist list[p1 to p2(p2 not included)] |                               |
 | (sort list)                                               | T      | sort.                            | (sort b) |
 | (rsort list)                                              | T      | reverse sort                        |                               |

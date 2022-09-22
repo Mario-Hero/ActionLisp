@@ -35,7 +35,7 @@ struct Atom {
 	vector<AtomFlag> flag;  // used for return and switch-case.
 	string vclass="";
 	string sval = "";
-	vector<Atom> list;
+	vector<Variable> list;
 	vector<Variable> childList; 
 	Variable* target=nullptr; // When AtomType == FUNCTION, this is used to save [this].
 	union {
@@ -103,7 +103,7 @@ private:
 			return doFunction(*static_cast<actionFun*>(fun.v.ptr), in);
 	}
 	inline bool varIsNull(const Variable& v) {
-		return v.name=="";
+		return v.name == "";
 	}
 	inline actionClass& getClassByName(const string& s) {
 		for (auto& c : classes) {
@@ -211,10 +211,10 @@ private:
 		variables.pop_back();
 	}
 	inline void pushBackLong(Atom& a, const long b) {
-		Atom t;
-		t.vType = AtomValueType::LONG;
-		t.type = AtomType::VALUE;
-		t.v.lval = b;
+		Variable t;
+		t.atom.vType = AtomValueType::LONG;
+		t.atom.type = AtomType::VALUE;
+		t.atom.v.lval = b;
 		a.list.push_back(t);
 	}
 	inline bool isKeyWord(const Atom & a) {
@@ -321,6 +321,12 @@ private:
 			return argAtom;
 		}
 	}
+	inline Variable VariableAtom(const Atom& a) {
+		Variable v;
+		v.name = ".";
+		v.atom = a;
+		return v;
+	}
 	Variable& atom2Variable(const Atom& argAtom) {
 		if (argAtom.type == AtomType::SYMBOL) {
 			if (!isKeyWord(argAtom)) {
@@ -338,16 +344,16 @@ private:
 	string toString(const Atom& a) { //if Atom is VALUE, it doesn't need varBlock
 		if (a.type == AtomType::LIST) {
 			string res = "{ ";
-			for (const Atom& ch : a.list) {
-				res += toString(ch) + " ";
+			for (const auto& ch : a.list) {
+				res += toString(ch.atom) + " ";
 			}
 			return res + "}";
 		}
 		Atom t = atom2V(a);
 		if (t.type == AtomType::LIST) {
 			string res = "{ ";
-			for (const Atom& ch : t.list) {
-				res += toString(ch) + " ";
+			for (const auto& ch : t.list) {
+				res += toString(ch.atom) + " ";
 			}
 			return res + "}";
 		}
@@ -514,7 +520,7 @@ private:
 							if (arguments.type == AtomType::LIST) {
 								for (size_t i = 0; i < arguments.list.size(); ++i) {
 									Variable v;
-									v.name = arguments.list[i].sval;
+									v.name = arguments.list[i].atom.sval;
 									t.input.push_back(v);
 								}
 							}
@@ -568,7 +574,7 @@ private:
 							if (arguments.type == AtomType::LIST) {
 								for (size_t i = 0; i < arguments.list.size(); ++i) {
 									Variable v;
-									v.name = arguments.list[i].sval;
+									v.name = arguments.list[i].atom.sval;
 									t.input.push_back(v);
 								}
 							}
@@ -912,7 +918,7 @@ private:
 					Atom symbolName = doExp(e.args[1]);
 					if (symbolName.type == AtomType::SYMBOL) {
 						Variable& var = findVarInAll(doExp(e.args[1]).sval);
-						if (var.name != "") {
+						if (!varIsNull(var)) {
 							var.atom = atom2V(doExp(e.args[2]));
 							//cout << "set " << doExp(e.args[1]).sval << "=" << toString(var.atom, e.block) << endl;
 						}
@@ -1359,7 +1365,7 @@ private:
 				if (e.args.size() >= 2) {
 					const Atom& p = doExp(e.args[1]);
 					Variable& var = atom2Variable(p);
-					if (var.name != "") {
+					if (!varIsNull(var)) {
 						switch (var.atom.vType) {
 							case AtomValueType::LONG: {
 								if (e.args.size() == 2) {
@@ -1659,8 +1665,8 @@ private:
 					for (const Variable& v : variables.back()) {
 						if (v.name == SWITCH_VAR_NAME) {
 							if (t.type == AtomType::LIST) {
-								for (const Atom& ta : t.list) {
-									if (equal(ta, v.atom)) {
+								for (const Variable& ta : t.list) {
+									if (equal(ta.atom, v.atom)) {
 										for (size_t i = 2; i < e.args.size(); ++i) {
 											if (i == e.args.size() - 1) {
 												e.atom = atom2V(doExp(e.args[i]));
@@ -1740,7 +1746,7 @@ private:
 				if (l.type == AtomType::LIST) {
 					for (size_t j = 0; j < l.list.size(); ++j) {
 						bool keepWhile = true;
-						variables.back()[tloc].atom = l.list[j];
+						variables.back()[tloc].atom = l.list[j].atom;
 						for (size_t i = 3; i < e.args.size(); ++i) {
 							const Atom& res = doExp(e.args[i]);
 							if (res.type == AtomType::SYMBOL) {
@@ -1770,24 +1776,28 @@ private:
 			else if (function == "range") {
 			if (e.args.size() == 3 || e.args.size() == 4) {
 				e.atom.type = AtomType::LIST;
+				const long start = atom2V(doExp(e.args[1])).v.lval;
+				const long end = atom2V(doExp(e.args[2])).v.lval;
+				long i = start;
 				if (e.args.size() == 4) {
-					long j = ceil((double)(e.args[2].atom.v.lval - e.args[1].atom.v.lval) / e.args[3].atom.v.lval);
+					const long step = atom2V(doExp(e.args[3])).v.lval;
+					long j = ceil((double)(end - start) / step);
 					if (j < 0) {
 						throwError("Not correct arguments for " + function);
 						return e.atom;
 					}
-					for (long i = e.args[1].atom.v.lval; j > 0; i += e.args[3].atom.v.lval) {
+					for (; j > 0; i += e.args[3].atom.v.lval) {
 						pushBackLong(e.atom, i);
 						--j;
 					}
 				}
 				else {
-					long j = (e.args[2].atom.v.lval - e.args[1].atom.v.lval);
+					long j = end - start;
 					if (j < 0) {
 						throwError("Not correct arguments for " + function);
 						return e.atom;
 					}
-					for (long i = e.args[1].atom.v.lval; j > 0; i += 1) {
+					for (; j > 0; i += 1) {
 						pushBackLong(e.atom, i);
 						--j;
 					}
@@ -2220,11 +2230,35 @@ private:
 			//vector
 			else if (function == "ref") {
 				if (e.args.size() == 3) {
-					long n = atom2V(doExp(e.args[2])).v.lval;
-					auto& l = doExp(e.args[1]).list;
-					if (n < 0)
-						n += l.size();
-					return l[n];
+					const long n = atom2V(doExp(e.args[2])).v.lval;
+					Atom p = doExp(e.args[1]);
+					e.atom.type = AtomType::VARIABLE;
+					if (p.type == AtomType::SYMBOL || p.type == AtomType::VARIABLE) {
+						auto& l = atom2Variable(p).atom.list;
+						if (n < 0)
+							e.atom.v.ptr = static_cast<void*>(&l[n + l.size()]);
+						else
+							e.atom.v.ptr = static_cast<void*>(&l[n]);
+					}
+					else {
+						const auto& l = atom2V(p).list;
+						if (n < 0)
+							e.atom = l[n + l.size()].atom;
+						else
+							e.atom = l[n].atom;
+					}
+					
+				}
+				else {
+					throwError("Not enough arguments for " + function);
+				}
+				return e.atom;
+			}
+			else if (function == "length") {
+				if (e.args.size() == 2) {
+					e.atom.type = AtomType::VALUE;
+					e.atom.vType = AtomValueType::LONG;
+					e.atom.v.lval = atom2V(doExp(e.args[1])).list.size();
 				}
 				else {
 					throwError("Not enough arguments for " + function);
@@ -2240,7 +2274,7 @@ private:
 					const size_t p2 = e.args.size() == 4 ? (atom2V(doExp(e.args[3])).v.lval % llen) : llen - 1;
 					const auto start = l.cbegin() + p1;
 					const auto end = l.cbegin() + p2 + 1;
-					e.atom.list = vector<Atom>(p2 - p1 + 1);
+					e.atom.list = vector<Variable>(p2 - p1 + 1);
 					copy(start, end, e.atom.list.begin());
 					return e.atom;
 				}
@@ -2297,12 +2331,12 @@ private:
 					Atom& p = doExp(e.args[1]);
 					if (p.type == AtomType::SYMBOL || p.type == AtomType::VARIABLE) {
 						Variable& v = atom2Variable(p);
-						sort(v.atom.list.begin(), v.atom.list.end(), [](Atom a, Atom b) {return !bigger(a, b); });
+						sort(v.atom.list.begin(), v.atom.list.end(), [](Variable a, Variable b) {return !bigger(a.atom, b.atom); });
 						return v.atom;
 					}
 					else {
 						e.atom = atom2V(p);
-						sort(e.atom.list.begin(), e.atom.list.end(), [](Atom a, Atom b) {return !bigger(a, b); });
+						sort(e.atom.list.begin(), e.atom.list.end(), [](Variable a, Variable b) {return !bigger(a.atom, b.atom); });
 						return e.atom;
 					}
 				}
@@ -2316,12 +2350,12 @@ private:
 					Atom& p = doExp(e.args[1]);
 					if (p.type == AtomType::SYMBOL || p.type == AtomType::VARIABLE) {
 						Variable& v = atom2Variable(p);
-						sort(v.atom.list.begin(), v.atom.list.end(), [](Atom a, Atom b) {return bigger(a, b); });
+						sort(v.atom.list.begin(), v.atom.list.end(), [](Variable a, Variable b) {return bigger(a.atom, b.atom); });
 						return v.atom;
 					}
 					else {
 						e.atom = atom2V(p);
-						sort(e.atom.list.begin(), e.atom.list.end(), [](Atom a, Atom b) {return bigger(a, b); });
+						sort(e.atom.list.begin(), e.atom.list.end(), [](Variable a, Variable b) {return bigger(a.atom, b.atom); });
 						return e.atom;
 					}
 				}
@@ -2369,7 +2403,7 @@ private:
 						Variable& var = atom2Variable(e.atom);
 						if (var.name != "") {
 							for (size_t i = 2; i < e.args.size(); ++i)
-								var.atom.list.push_back(atom2V(doExp(e.args[i])));
+								var.atom.list.push_back(VariableAtom(atom2V(doExp(e.args[i]))));
 							return var.atom;
 						}
 						return e.atom;
@@ -2378,7 +2412,7 @@ private:
 						if (e.atom.type == AtomType::LIST) {
 							e.atom = atom2V(e.atom);
 							for (size_t i = 2; i < e.args.size(); ++i) {
-								e.atom.list.push_back(atom2V(doExp(e.args[i])));
+								e.atom.list.push_back(VariableAtom(atom2V(doExp(e.args[i]))));
 							}
 							return e.atom;
 						}
@@ -2435,7 +2469,7 @@ private:
 									const Atom p = atom2V(doExp(e.args[j]));
 									while (true) {
 										if (i < var.atom.list.size()) {
-											if (equal(var.atom.list[i], p)) {
+											if (equal(var.atom.list[i].atom, p)) {
 												var.atom.list.erase(var.atom.list.begin() + i);
 											}
 											else {
@@ -2463,7 +2497,7 @@ private:
 									const Atom p = atom2V(doExp(e.args[j]));
 									while (true) {
 										if (i < e.atom.list.size()) {
-											if (equal(e.atom.list[i], p)) {
+											if (equal(e.atom.list[i].atom, p)) {
 												e.atom.list.erase(e.atom.list.begin() + i);
 											}
 											else {
@@ -2500,7 +2534,7 @@ private:
 						if (var.name != "") {
 							const Atom p = atom2V(doExp(e.args[2]));
 							for (size_t i = 0; i < var.atom.list.size(); ++i) {
-								if (equal(var.atom.list[i], p)) {
+								if (equal(var.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
 								}
@@ -2513,7 +2547,7 @@ private:
 							e.atom.type = AtomType::VALUE;
 							const Atom& p = atom2V(doExp(e.args[2]));
 							for (size_t i = 0; i < e.atom.list.size(); ++i) {
-								if (equal(e.atom.list[i], p)) {
+								if (equal(e.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
 								}
@@ -2538,7 +2572,7 @@ private:
 						if (var.name != "") {
 							const Atom p = atom2V(doExp(e.args[2]));
 							for (int i = var.atom.list.size() - 1; i >= 0; --i) {
-								if (equal(var.atom.list[i], p)) {
+								if (equal(var.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
 								}
@@ -2551,7 +2585,7 @@ private:
 							e.atom.type = AtomType::VALUE;
 							const Atom p = atom2V(doExp(e.args[2]));
 							for (int i = e.atom.list.size() - 1; i >= 0; --i) {
-								if (equal(e.atom.list[i], p)) {
+								if (equal(e.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
 								}
@@ -2580,7 +2614,7 @@ private:
 							t.sval = p.sval.substr(cutIn, i - cutIn);
 							t.type = AtomType::VALUE;
 							t.vType = AtomValueType::STRING;
-							e.atom.list.push_back(t);
+							e.atom.list.push_back(VariableAtom(t));
 							cutIn = i+1;
 						}
 					}
@@ -2589,7 +2623,7 @@ private:
 						t.sval = p.sval.substr(cutIn, p.sval.size() - cutIn);
 						t.type = AtomType::VALUE;
 						t.vType = AtomValueType::STRING;
-						e.atom.list.push_back(t);
+						e.atom.list.push_back(VariableAtom(t));
 					}
 				}
 				else {
@@ -2606,9 +2640,9 @@ private:
 					e.atom.vType = AtomValueType::STRING;
 					if (!varIsNull(v))
 						p = v.atom;
-					e.atom.sval = p.list[0].sval;
+					e.atom.sval = p.list[0].atom.sval;
 					for (size_t i = 1; i < p.list.size(); ++i) {
-						e.atom.sval = e.atom.sval + splitChar + p.list[i].sval;
+						e.atom.sval = e.atom.sval + splitChar + p.list[i].atom.sval;
 					}
 				}
 				else if (e.args.size() == 2) {
@@ -2618,9 +2652,9 @@ private:
 					e.atom.vType = AtomValueType::STRING;
 					if (!varIsNull(v))
 						p = v.atom;
-					e.atom.sval = p.list[0].sval;
+					e.atom.sval = p.list[0].atom.sval;
 					for (size_t i = 1; i < p.list.size(); ++i) {
-						e.atom.sval = e.atom.sval + p.list[i].sval;
+						e.atom.sval = e.atom.sval + p.list[i].atom.sval;
 					}
 				}
 				else {
@@ -2665,7 +2699,7 @@ private:
 							if (arguments.type == AtomType::LIST) {
 								for (size_t i = 0; i < arguments.list.size(); ++i) {
 									Variable v;
-									v.name = arguments.list[i].sval;
+									v.name = arguments.list[i].atom.sval;
 									t.input.push_back(v);
 								}
 							}
@@ -2801,7 +2835,7 @@ private:
 				case '(': {
 					++nowPos; 
 					Expression exp = readExpression(str);
-					t.list.push_back(doExp(exp));
+					t.list.push_back(VariableAtom(doExp(exp)));
 					switch (str[nowPos]) {
 					case '}': {
 						++nowPos;
@@ -2819,14 +2853,14 @@ private:
 				}
 				case ' ':
 				case '\n': {
-					t.list.push_back(readAtom(str, posArg, nowPos - 1));
+					t.list.push_back(VariableAtom(readAtom(str, posArg, nowPos - 1)));
 					++nowPos;
 					posArg = nowPos;
 					state = ExpressionState::IDLE;
 					break;
 				}
 				case '{': {
-					t.list.push_back(readList(str));
+					t.list.push_back(VariableAtom(readList(str)));
 					state = ExpressionState::IDLE;
 					++nowPos;
 					posArg = nowPos;
@@ -2834,7 +2868,7 @@ private:
 				}
 				case '}': {
 					if (posArg != nowPos) {
-						t.list.push_back(readAtom(str, posArg, nowPos - 1));
+						t.list.push_back(VariableAtom(readAtom(str, posArg, nowPos - 1)));
 						++nowPos;
 						return t;
 					}
@@ -2935,7 +2969,7 @@ private:
 		else if (a.type == AtomType::LIST && b.type == AtomType::LIST) {
 			const size_t listMinSize = (a.list.size() < b.list.size()) ? a.list.size() : b.list.size();
 			for (size_t i = 0; i < listMinSize; ++i) {
-				if (!bigger(a.list[i], b.list[i]))
+				if (!bigger(a.list[i].atom, b.list[i].atom))
 					return false;
 			}
 			return true;
@@ -2969,7 +3003,7 @@ private:
 			if (a.list.size() != b.list.size())
 				return false;
 			for (size_t i = 0; i < a.list.size(); ++i) {
-				if (!equal(a.list[i], b.list[i]))
+				if (!equal(a.list[i].atom, b.list[i].atom))
 					return false;
 			}
 			return true;
