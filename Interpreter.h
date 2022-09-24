@@ -28,6 +28,13 @@ enum class AtomFlag {
 	RETURN, CASE
 };
 
+union actionData {
+	bool bval;
+	long lval;
+	double dval;
+	void* ptr;
+};
+
 struct Variable;
 struct Atom {
 	AtomType type= AtomType::VALUE;
@@ -38,12 +45,7 @@ struct Atom {
 	vector<Variable> list;
 	vector<Variable> childList; 
 	Variable* target=nullptr; // When AtomType == FUNCTION, this is used to save [this].
-	union {
-		bool bval;
-		long lval;
-		double dval;
-		void* ptr;
-	} v;
+	actionData v = {false};
 };
 
 struct Expression { // args[0].sval is function name.
@@ -238,18 +240,18 @@ private:
 		int findI = -1;
 		for (size_t i = 0; i < topBlock.size(); ++i) {
 			if (topBlock[i].name == name) {
-				findI = i;
+				findI = (int)i;
 				break;
 			}
 		}
 		return findI;
 	}
 	Variable& findVarInAll(const string& name, const int varBlock=0) {
-		int findI = -1;
-		const long block = variables.size() - varBlock - 1;
+		long findI = -1;
+		const long block = (long)variables.size() - varBlock - 1;
 		for (size_t i = 0; i < variables[block].size(); ++i) {
 			if (variables[block][i].name == name) {
-				findI = i;
+				findI = (long)i;
 				break;
 			}
 		}
@@ -267,11 +269,11 @@ private:
 		}
 	}
 	const Variable& constfindVarInAll(const string& name, const int varBlock = 0) {
-		int findI = -1;
-		const long block = variables.size() - varBlock - 1;
+		long findI = -1;
+		const long block = (long)variables.size() - varBlock - 1;
 		for (size_t i = 0; i < variables[block].size(); ++i) {
 			if (variables[block][i].name == name) {
-				findI = i;
+				findI = (long)i;
 				break;
 			}
 		}
@@ -1781,7 +1783,7 @@ private:
 				long i = start;
 				if (e.args.size() == 4) {
 					const long step = atom2V(doExp(e.args[3])).v.lval;
-					long j = ceil((double)(end - start) / step);
+					long j = (long)ceil((double)(end - start) / step);
 					if (j < 0) {
 						throwError("Not correct arguments for " + function);
 						return e.atom;
@@ -2031,7 +2033,7 @@ private:
 				if (e.args.size() == 2) {
 					e.atom.type = AtomType::VALUE;
 					e.atom.vType = AtomValueType::LONG;
-					e.atom.v.lval = ceil(toDouble(atom2V(doExp(e.args[1]))));
+					e.atom.v.lval = (long)ceil(toDouble(atom2V(doExp(e.args[1]))));
 				}
 				else {
 					throwError("Not correct numbers arguments for " + function);
@@ -2042,7 +2044,7 @@ private:
 				if (e.args.size() == 2) {
 					e.atom.type = AtomType::VALUE;
 					e.atom.vType = AtomValueType::LONG;
-					e.atom.v.lval = floor(toDouble(atom2V(doExp(e.args[1]))));
+					e.atom.v.lval = (long)floor(toDouble(atom2V(doExp(e.args[1]))));
 				}
 				else {
 					throwError("Not correct numbers arguments for " + function);
@@ -2163,7 +2165,7 @@ private:
 			else if (function == "tellRead") {
 				if (e.args.size() == 2) {
 					e.atom.vType = AtomValueType::LONG;
-					e.atom.v.lval=static_cast<fstream*>(atom2V(doExp(e.args[1])).v.ptr)->tellg();
+					e.atom.v.lval= (long)static_cast<fstream*>(atom2V(doExp(e.args[1])).v.ptr)->tellg();
 				}
 				else {
 					throwError("Not enough arguments for " + function);
@@ -2173,7 +2175,7 @@ private:
 			else if (function == "tellWrite") {
 				if (e.args.size() == 2) {
 					e.atom.vType = AtomValueType::LONG;
-					e.atom.v.lval = static_cast<fstream*>(atom2V(doExp(e.args[1])).v.ptr)->tellp();
+					e.atom.v.lval = (long)static_cast<fstream*>(atom2V(doExp(e.args[1])).v.ptr)->tellp();
 				}
 				else {
 					throwError("Not enough arguments for " + function);
@@ -2258,7 +2260,7 @@ private:
 				if (e.args.size() == 2) {
 					e.atom.type = AtomType::VALUE;
 					e.atom.vType = AtomValueType::LONG;
-					e.atom.v.lval = atom2V(doExp(e.args[1])).list.size();
+					e.atom.v.lval = (long)atom2V(doExp(e.args[1])).list.size();
 				}
 				else {
 					throwError("Not enough arguments for " + function);
@@ -2535,7 +2537,7 @@ private:
 							const Atom p = atom2V(doExp(e.args[2]));
 							for (size_t i = 0; i < var.atom.list.size(); ++i) {
 								if (equal(var.atom.list[i].atom, p)) {
-									e.atom.v.lval = i;
+									e.atom.v.lval = (long)i;
 									return e.atom;
 								}
 							}
@@ -2548,7 +2550,7 @@ private:
 							const Atom& p = atom2V(doExp(e.args[2]));
 							for (size_t i = 0; i < e.atom.list.size(); ++i) {
 								if (equal(e.atom.list[i].atom, p)) {
-									e.atom.v.lval = i;
+									e.atom.v.lval = (long)i;
 									return e.atom;
 								}
 							}
@@ -2571,7 +2573,7 @@ private:
 						e.atom.type = AtomType::VALUE;
 						if (var.name != "") {
 							const Atom p = atom2V(doExp(e.args[2]));
-							for (int i = var.atom.list.size() - 1; i >= 0; --i) {
+							for (long i = (long)var.atom.list.size() - 1; i >= 0; --i) {
 								if (equal(var.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
@@ -2584,7 +2586,7 @@ private:
 						if (e.atom.type == AtomType::LIST) {
 							e.atom.type = AtomType::VALUE;
 							const Atom p = atom2V(doExp(e.args[2]));
-							for (int i = e.atom.list.size() - 1; i >= 0; --i) {
+							for (long i = (long)e.atom.list.size() - 1; i >= 0; --i) {
 								if (equal(e.atom.list[i].atom, p)) {
 									e.atom.v.lval = i;
 									return e.atom;
@@ -3032,10 +3034,10 @@ private:
 			switch (state) {
 			case ExpressionState::IDLE: {
 				if (s != ' ' && s != '\n') {
-					if(s != ';'){
-						state = ExpressionState::EXPRESSION;
-						posArg = nowPos;
-						//DONT'T USE BREAK
+					if (s == ';') {
+						state = ExpressionState::COMMENT;
+						++nowPos;
+						break;
 					}
 					else if (s == '#') {
 						if (nowPos < str.size() - 1) {
@@ -3053,10 +3055,11 @@ private:
 						break;
 					}
 					else {
-						state = ExpressionState::COMMENT;
-						++nowPos;
-						break;
+						state = ExpressionState::EXPRESSION;
+						posArg = nowPos;
+						//DONT'T USE BREAK
 					}
+					
 				}
 				else {
 					++nowPos;
